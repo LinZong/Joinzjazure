@@ -1,67 +1,72 @@
 <!DOCTYPE html>
 <head>
-<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="http://v3.bootcss.com/favicon.ico">
-    <title>Automatic Mail Sender GUI</title>
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <link rel="icon" href="http://v3.bootcss.com/favicon.ico">
+        <title>Automatic Mail Sender GUI</title>
 
-</head>
+    </head>
 
-<body>
+    <body>
 
-<?php
-
-include ("ConnectDatabase.php");
-include ("class.phpmailer.php");
-include ("class.smtp.php");
-$mail = new PHPMailer();
-$mail->CharSet = "utf-8";
-$mail->isSMTP();
-$mail->SMTPAuth=true;
-$mail->Host = 'smtp.qq.com';
-$mail->SMTPSecure = 'ssl';
-$mail->Port = 465;
-$mail->FromName = 'Zjazure';
-$mail->Username ='1546998232';
-$mail->Password = 'LSY040343';
-$mail->From = '1546998232@qq.com';
-$mail->isHTML(true);
-foreach ($_POST['sub'] as $result)
-{
-    $mailaddress = mysql_fetch_array(mysql_query("SELECT * FROM tbl_name WHERE COL1 = '$result'"));
-
-    if ($mailaddress['item'] == "")
+    <?php
+    include ("ConnectDatabase.php");
+    function send_post($url, $post_data)
     {
-        $mail->addAddress($mailaddress['COL2'],'$mailaddress[COL2]');
-        $mail->Subject = '湛江一中IT社面试通知';
-        $mail->Body = $result.constant("DETAILS");
-        $status = $mail->send();
-        if($status)
-        {
-            echo '发送邮件成功，发给了  '.$result.'  邮件地址为:'.$mailaddress['COL2']. "<br />";
-            mysql_query("UPDATE tbl_name SET item='Yes' WHERE COL1 ='$result'");
+    $postdata = http_build_query($post_data);
+    $options = array(
+            'http' => array(
 
-        }else{
-            echo '发送邮件失败，错误信息为：'.$mail->ErrorInfo;
+            'method' => 'POST',
 
-        }
-    }else
-    {
-        echo "The Person ".$result."  ".$mailaddress['COL2']." exists something wrong.Please check your select.";
+            'header' => 'Content-type:application/x-www-form-urlencoded',
 
-    }
+            'content' => $postdata,
 
-sleep(2);
+            'timeout' => 15 * 60
+        )
+
+    );
+    $context = stream_context_create($options);
+    $result = file_get_contents($url, false, $context);
+    return $result;
 }
 
 
+    foreach ($_POST['sub'] as $result)
+    {
+        $mailaddress = mysql_fetch_array(mysql_query("SELECT * FROM tbl_name WHERE COL1 = '$result'"));
 
-?>
+        if ($mailaddress['item'] == "")
+        {
 
-</body>
-</html>
+         $post_data = array(
+             'from' => 'no-reply@accounts.google.com',
+             'to' => $mailaddress['COL2'],
+             'subject' => '湛江一中IT社面试通知',
+             'html' => $result.constant("DETAILS")
+         );
+        send_post('http://hs.stcula.com:800/mailer',$post_data);
+		echo '发送邮件成功，发给了  '.$result.'  邮件地址为:'.$mailaddress['COL2']. "<br />";
+		mysql_query("UPDATE tbl_name SET item='Yes' WHERE COL1 ='$result'");
+        }
+        else
+        {
+            echo "The Person ".$result."  ".$mailaddress['COL2']." exists something wrong.Please check your select.";
+
+        }
+
+
+    }
+
+
+
+    ?>
+
+    </body>
+    </html>
